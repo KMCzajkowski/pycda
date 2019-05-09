@@ -230,6 +230,103 @@ def calc_E_inc(k_vec_k, N, pos, E0, E_inc):
     for i in range(N):
         E_inc[3 * i: 3 * (i + 1)] = E0[3 * i: 3 * (i + 1)] * exp(1j * dot(k_vec_k, pos[i]))
 
+def calc_R():
+    """
+    calculate R matrix 
+    """
+    N = np.size(r[:,0])
+    AR = np.zeros(3*N,3*N)
+
+    Am=calc_A_matrix(k1,r,alph) # comply to the rules
+    [S,nS] = precalc_Somm_KC(r,k1,k2) # tbc
+
+    iS = -1 
+    for jj in range(N):
+      for kk in range(N):
+        iS = iS + 1 
+        Rjk = reflection_Rjk_kc(k1,k2,l,r[jj,:],r[kk,:],S[nS[iS],:])
+        if jj != kk:
+          AR[jj*3+1:(jj+1)*3,kk*3+1:(kk+1)*3] = Rjk
+        else:
+          AR[jj*3+1:(jj+1)*3,kk*3+1:(kk+1)*3] = AR[jj*3+1:(jj+1)*3,kk*3+1:(kk+1)*3] + Rjk
+    AR=AR+Am    
+    R='bleee'
+    return R
+
+def precalc_Somm(r,k1,k2):
+    """
+    precalculates Sommerfeld integrals
+    """
+    x=r[:,0]
+    y=r[:,1]
+    z=r[:,2]
+    X=np.matlib.repmat(x,1,np.size(x))
+    Y=np.matlib.repmat(y,1,np.size(y))
+    Z=np.matlib.repmat(z,1,np.size(z))
+
+    dX=X-np.Transpose(X)
+    dY=Y-np.Transpose(Y)
+    zph=Z+np.Transpose(Z)
+    rho=np.sqrt(dX**2+dY**2)
+
+    zr0 = np.concatenate((zph[:],rho[:]),axis=1)
+    zr = np.unique(zr0,axis=0)
+    #n bleee
+    L = zr.shape()
+    L = L[0]
+
+    S = np.zeros(L,4)
+
+    for j in range(L):
+        S[j,:] = evlua(zr[j,0],zr[j,1],k1,k2)
+    return S,n
+    
+def reflection_Rjk(k1,k2,r1,r2,S):
+    """
+    calculates parts of R matrix
+    """
+    k0 = 2*pi/l
+    rI_k2j = np.array([r_j[0]-r_k[0],r_j[1]-r_k[1],r_j[2]+r_k[2]]) 
+    rIjk = norm(rI_k2j)
+
+    rhat_x = rI_k2j[0]/rIjk 
+    rhat_y = rI_k2j[1]/rIjk
+    rhat_z = rI_k2j[2]/rIjk
+
+    beta = (1 - 1*(k0*rIjk)**-2 + 1j*(k0*rIjk)**-1)
+    gamma = -(1 - 3*(k0*rIjk)**-2 + 1j*3*(k0*rIjk)**-1)
+
+    IV_rho = S[0]
+    IV_z = S[1]
+    IH_rho = S[2]
+    IH_phi = S[3]
+
+    S11 = rhat_x**2*IH_rho - rhat_y**2*IH_phi
+    S12 = rhat_x*rhat_y*(IH_rho + IH_phi)
+    S13 = rhat_x*IV_rho
+    S21 = rhat_x*rhat_y*(IH_rho + IH_phi)
+    S22 = rhat_y**2*IH_rho - rhat_x**2*IH_phi
+    S23 = rhat_y*IV_rho
+    S31 = -rhat_x*IV_rho
+    S32 = -rhat_y*IV_rho
+    S33 = IV_z
+
+    Sjk = np.array([[S11,S12,S13],[S21,S22,S23],[S31,S32,S33]])
+
+    G11 = -(beta + gamma*rhat_x**2)
+    G12 = -gamma*rhat_x*rhat_y
+    G13 = gamma*rhat_x*rhat_z
+    G21 = -gamma*rhat_y*rhat_x
+    G22 = -(beta + gamma*rhat_y**2)
+    G23 = gamma*rhat_y*rhat_z
+    G31 = -gamma*rhat_z*rhat_x
+    G32 = -gamma*rhat_z*rhat_y
+    G33 = beta + gamma*rhat_z**2
+
+    Gjk = np.array([[G11,G12,G13],[G21,G22,G23],[G31,G32,G33]])
+    Rjk = -(Sjk + k0**2*(k1**2-k2**2)/(k1**2+k2**2)*exp(1j*k0*rIjk)/rIjk*Gjk)  
+    return Rjk
+
 # Calculate the extinction efficiency. The effective area is the mean of individual particle areas
 def efficiency_calc(cross_section, r_eff):
     return cross_section / (mean(pi * r_eff ** 2))
