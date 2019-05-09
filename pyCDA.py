@@ -4,7 +4,6 @@ Dependencies:
 scipy,numpy,matplotlib,tqdm (soon)
 
 """
-from LD import LD  #additional: Lorentz-Drude permittivity
 import time
 import numpy as np
 from numpy import pi, exp, dot, conj, sum, mean, imag
@@ -129,15 +128,10 @@ def set_drude(wl,ep,g,e0):
     ep - resonance energy in eV
     g - gamma in eV
     e0 - eps_inf
-    
     """
     
     w=1239.84/(wl*10**9)
     y=e0-ep**2/(w**2+1j*w*g)
-    #re=real(y)
-    #ie=imag(y)
-    #ndata=1/sqrt(2)*sqrt(re+sqrt(re**2+ie**2))
-    #kdata=1/sqrt(2)*sqrt(-re+sqrt(re**2+ie**2))
     return y
 
 def calc_alpha_i(r, eps, eps_surround,k):
@@ -189,7 +183,6 @@ def Aij_matrix(arguments):
     Aij[0][1] = Aij[1][0] = nx * ny * C
     Aij[0][2] = Aij[2][0] = nx * nz * C
     Aij[1][2] = Aij[2][1] = ny * nz * C
-
     return Aij
 
 
@@ -204,7 +197,6 @@ def calc_A_matrix(A, k, N, r_eff, epsilon, eps_surround,pos):
     :param eps_surround: dielectric function of the surrounding
     :return: Returns A filled with interaction terms between particles
     """
-
     Aij = np.zeros([3, 3], dtype=complex) # interaction matrix
     if N==1:
         for i in range(N):
@@ -256,12 +248,10 @@ def cdacalc(wave,epsvec,eps_surround,N,pos,r_eff,E0_vec,k_vec):
     print("Number of wavelengths: "+str(n_wave))
     
     # pre allocate the arrays/vectors
-
     A = np.zeros([3 * N, 3 * N], dtype='complex') # A matrix of 3N x 3N filled with zeros
     p = np.zeros(3 * N, dtype='complex')  # A vector that stores polarization Px, Py, Pz of the each particles, we will use this for initial guess for solver
     E0 = np.tile(E0_vec, N) # A vector that has the Ex, Ey, Ez for each particles, we make this by tiling the E0_vec vector
     E_inc = np.zeros(3 * N, dtype='complex') # A vector storing the Incident Electric field , Einc_x, Einc_y, Einc_z for each particle
-
 
     p_calc = np.zeros([3 * N, n_wave], dtype='complex')  # This stores the dipoles moments for each particle at different wavelengths
     c_ext = np.zeros(n_wave) # stores the extinction crosssection
@@ -272,15 +262,11 @@ def cdacalc(wave,epsvec,eps_surround,N,pos,r_eff,E0_vec,k_vec):
     field_enh=np.zeros([N,n_wave])
 
     start = time.clock()
-
     # loop over the wavelength
-
     for w_index, w in enumerate(wave):
         start_at_this_wavelength = time.clock()
-
         print('-'*100)
         print('Running wavelength: ', w * 1E9)
-
         k = (2 * pi / w)  # create the k
         print(k)
         if N==1:
@@ -320,7 +306,6 @@ def cdacalc(wave,epsvec,eps_surround,N,pos,r_eff,E0_vec,k_vec):
             print('Successful Exit')
             # calculate the extinction crossection
             c_ext[w_index] = (4 * pi * k / norm(E0) ** 2) * np.sum(np.imag(dot(conj(E_inc), p_calc[:,w_index])))
-
             # calculate the absorption crossection
             for i in range(N):
                 c_absind[i,w_index]=(4 * pi * k / norm(E0) ** 2)*( np.imag(dot(p_calc[3*i : 3*(i+1), w_index],
@@ -344,11 +329,6 @@ def cdacalc(wave,epsvec,eps_surround,N,pos,r_eff,E0_vec,k_vec):
                                           )
                                   - (2.0/3)*k**3*norm(p_calc[3*i : 3*(i+1), w_index])**2
                                   )
-                #print(np.imag(dot(p_calc[3*i : 3*(i+1), w_index],
-                #                                    dot(conj(A[3 * i: 3 * (i + 1), 3 * i: 3 * (i + 1)]),
-                #                                        conj(p_calc[3*i: 3*(i+1), w_index])))))
-                #print(4 * pi * k / norm(E0) ** 2)
-                #print(4 * pi * k)
             c_abs[w_index] *= (4 * pi * k / norm(E0) ** 2)
             c_scat[w_index] = c_ext[w_index] - c_abs[w_index]
             
